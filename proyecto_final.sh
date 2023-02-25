@@ -31,48 +31,47 @@ echo ""
 # Función para crear un nuevo usuario
 function crear_usuario {
     read -p "Ingrese el nombre de usuario: " username
-    read -s -p "Ingrese la contraseña: " password
-    read -p "Ingrese el nombre completo: " fullname
-    read -p "Ingrese el directorio home: " homedir
-    read -p "Ingrese la shell: " shell
+    read -s -p "Ingrese la contraseña del usuario: " password
+    echo
+    read -p "Ingrese el nombre completo del usuario: " fullname
+    read -p "Ingrese el directorio de inicio del usuario (opcional, presione enter para dejar el valor por defecto): " homedir
+    read -p "Ingrese la shell por defecto del usuario (opcional, presione enter para dejar el valor por defecto): " shell
 
-    # Añadir el usuario al archivo /etc/passwd
-    sudo useradd -m -c "$fullname" -d "$homedir" -s "$shell" "$username"
+    # Establecer directorio de inicio y shell por defecto si no se proporcionaron valores
+    if [ -z $homedir ]; then
+        homedir="/home/$username"
+    fi
 
-    # Establecer la contraseña del usuario
-    echo "$username:$password" | sudo chpasswd
+    if [ -z $shell ]; then
+        shell="/bin/bash"
+    fi
 
-    echo "Usuario creado exitosamente"
+    # Crear el usuario con el nombre de usuario y contraseña especificados
+    sudo useradd -m -c $fullname -d $homedir -s $shell $username
+    echo $username:$password | sudo chpasswd
+    echo "Usuario creado con éxito!"
+    read x
 }
 #Opcion2(Creacion de usuarios)
 function validar_usuario() {
-  # Expresión regular para verificar el nombre de usuario
-  patron_usuario='^[a-z_][a-z0-9_-]{2,31}$'
+    read -p "Ingrese el nombre de usuario que desea validar: " username
 
-  if echo "$1" | grep -qE "$patron_usuario"; then
-    echo "El usuario '$1' es válido"
-  else
-    echo "El usuario '$1' no es válido"
-    exit 1
-  fi
-}
+    # Expresión regular para validar el nombre de usuario
+    # Valida si el nombre de usuario comienza con una letra minúscula
+    # y contiene solo letras minúsculas, números y guiones (-).
+    # El nombre de usuario puede terminar con un signo de dólar ($).
+    # Esto se debe a que algunos sistemas de Linux permiten que
+    # los nombres de usuario terminen con un signo de dólar
 
-function crear_usuario() {
-  read -p "Ingrese el nombre de usuario: " username
-  validar_usuario "$username"
+    regex='^[a-z][-a-z0-9]*\$?$'
 
-  read -s -p "Ingrese la contraseña: " password
-  read -p "Ingrese el nombre completo: " fullname
-  read -p "Ingrese el directorio home: " homedir
-  read -p "Ingrese la shell: " shell
-
-  # Añadir el usuario al archivo /etc/passwd
-  sudo useradd -m -c "$fullname" -d "$homedir" -s "$shell" "$username"
-
-  # Establecer la contraseña del usuario
-  echo "$username:$password" | sudo chpasswd
-
-  echo "Usuario creado exitosamente"
+    if [[ $username =~ $regex ]]; then
+        echo "El nombre de usuario es válido"
+	read x
+    else
+        echo "El nombre de usuario no es válido"
+	read x
+    fi
 }
 
 #Opcion1 (Borrar usuarios)
@@ -91,37 +90,61 @@ function borrar_usuario {
     sudo userdel -r -f "$username"
 
     echo "Usuario borrado exitosamente"
+    read x
 }
-#Opcion2 (Borrar usuarios)
-function borrar_usuario {
-    read -p "Ingrese el nombre de usuario a borrar: " username
-
-    # Verificar si el usuario existe en el archivo /etc/passwd
-    while ! grep -q "^${username}:" /etc/passwd; do
-        read -p "El usuario ${username} no existe. Ingrese un nombre de usuario válido: " username
-    done
-
-    # Borrar el usuario y su directorio home
-    sudo userdel -r "$username"
-
-    echo "Usuario borrado exitosamente"
-}
-
 # Función para mostrar los usuarios creados
 function mostrar_usuarios {
     echo "Lista de usuarios:"
-    awk -F: '{ print "Nombre de usuario: "$1"\nNombre completo: "$5 }' /etc/passwd
+    getent passwd | awk -F: '{print $1}'
 }
 
 # Función para cambiar la shell por defecto de los usuarios
 function cambiar_shell {
-    read -p "Ingrese la nueva shell: " new_shell
+  # Solicitar el nombre del usuario
+  read -p "Ingrese el nombre del usuario: " usuario
 
-    # Modificar el archivo /etc/default/useradd para cambiar la shell por defecto
-    sudo sed -i "s@SHELL=/bin/bash@SHELL=$new_shell@g" /etc/default/useradd
+  # Verificar si el usuario existe
+  if ! id -u $usuario > /dev/null 2>&1; then
+    echo "El usuario $usuario no existe."
+    return 1
+  fi
 
-    echo "Shell por defecto cambiada exitosamente"
+  # Mostrar la lista de shells disponibles
+  echo "Shells disponibles:"
+  cat /etc/shells
+
+  # Solicitar la nueva shell
+  read -p "Ingrese la ruta de la nueva shell: " nueva_shell
+
+  # Verificar si la nueva shell es válida
+  if ! grep -q ^$nueva_shell$ /etc/shells; then
+    echo "La shell $nueva_shell no es válida o no está en la lista de shells permitidas."
+    return 1
+    read x
+  fi
+
+  # Cambiar la shell del usuario
+  sudo chsh -s $nueva_shell $usuario
+  if [ $? -eq 0 ]; then
+    echo "La shell del usuario '$usuario' ha sido cambiada a $nueva_shell."
+    read x
+    # Verificar que se ha actualizado correctamente la shell
+    actual_shell=$(awk -F: /^$usuario:/ {print \$NF} /etc/passwd)
+    if [ $actual_shell = $nueva_shell ]; then
+      echo "La shell del usuario $usuario ha sido actualizada correctamente."
+      read x
+    else
+      echo "Ha ocurrido un error al actualizar la shell del usuario $usuario."
+      return 1
+      read x
+    fi
+  else
+    echo "Ha ocurrido un error al cambiar la shell del usuario $usuario."
+    return 1
+    read x
+  fi
 }
+
 
 #Inicio del Menu
 while :
@@ -131,7 +154,9 @@ Menu
     case $opcion in
         1) crear_usuario;;
         2) borrar_usuario;;
-        3) mostrar_usuarios;;
+        3) mostrar_usuarios
+	   read x
+	   ;;
         4) validar_usuario;;
         5) cambiar_shell;;
         6) exit 0;;
@@ -141,7 +166,7 @@ Menu
 		   echo "| (    \/   ) (   | (    \/| (    \/| (    \/"
 		   echo "| (__       | |   | (__    | (_____ | (_____ "
 		   echo "|  __)      | |   |  __)   (_____  )(_____  )"
-	     echo "| (         | |   | (            ) |      ) |"
+                   echo "| (         | |   | (            ) |      ) |"
 		   echo "| (____/\   | |   | (____/\/\____) |/\____) |"
 		   echo "(_______/   )_(   (_______/\_______)\_______)"
 		   echo ""
