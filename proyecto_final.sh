@@ -49,8 +49,12 @@ function crear_usuario {
     # Crear el usuario con el nombre de usuario y contraseña especificados
     sudo useradd -m -c $fullname -d $homedir -s $shell $username
     echo $username:$password | sudo chpasswd
-    echo "Usuario creado con éxito!"
-    read x
+    echo -e "\n"
+    echo "<=================================>" 
+    echo "  Usuario creado con éxito :D!"
+    echo "<=================================>"
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
+    #read x
 }
 #Opcion2(Creacion de usuarios)
 function validar_usuario() {
@@ -66,11 +70,17 @@ function validar_usuario() {
     regex='^[a-z][-a-z0-9]*\$?$'
 
     if [[ $username =~ $regex ]]; then
-        echo "El nombre de usuario es válido"
-	read x
+	echo -e "\n"
+	echo "<=================================>"
+        echo "  El nombre de usuario es válido"
+	echo "<=================================>"
+	read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     else
-        echo "El nombre de usuario no es válido"
-	read x
+	echo -e "\n"
+	echo "<=================================>"
+        echo " El nombre de usuario no es válido"
+	echo "<=================================>"
+	read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     fi
 }
 
@@ -82,20 +92,28 @@ function borrar_usuario {
         if [[ -z "$username" ]]; then
             echo "Debe ingresar un nombre de usuario."
         elif [[ ! $(getent passwd "$username") ]]; then
+	    echo -e "\n"
             echo "El usuario ingresado no existe."
+	    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
         fi
     done
 
     # Borrar el usuario y su directorio home
     sudo userdel -r -f "$username"
-
-    echo "Usuario borrado exitosamente"
-    read x
+    echo -e "\n"
+    echo "<=================================>"
+    echo "   Usuario borrado exitosamente"
+    echo "<=================================>"
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
 }
 # Función para mostrar los usuarios creados
 function mostrar_usuarios {
-    echo "Lista de usuarios:"
+    echo "Lista de usuarios: "
+    echo "<=================================>"
     getent passwd | awk -F: '{print $1}'
+    echo "<=================================>"
+    echo -e "\n"
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
 }
 
 # Función para cambiar la shell por defecto de los usuarios
@@ -105,43 +123,57 @@ function cambiar_shell {
 
   # Verificar si el usuario existe
   if ! id -u $usuario > /dev/null 2>&1; then
+    echo -e "\n"
     echo "El usuario $usuario no existe."
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     return 1
   fi
 
   # Mostrar la lista de shells disponibles
+  echo -e "\n"
+  echo "<=================================>"
   echo "Shells disponibles:"
   cat /etc/shells
+  echo "<=================================>"
 
   # Solicitar la nueva shell
-  read -p "Ingrese la ruta de la nueva shell: " nueva_shell
+  read -p "Ingrese la ruta de la nueva shell ==> " nueva_shell
 
   # Verificar si la nueva shell es válida
   if ! grep -q ^$nueva_shell$ /etc/shells; then
+    echo -e "\n"
     echo "La shell $nueva_shell no es válida o no está en la lista de shells permitidas."
     return 1
-    read x
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
   fi
 
   # Cambiar la shell del usuario
   sudo chsh -s $nueva_shell $usuario
   if [ $? -eq 0 ]; then
-    echo "La shell del usuario '$usuario' ha sido cambiada a $nueva_shell."
-    read x
+    echo -e "\n"
+    echo "<=================================================================>"
+    echo "   La shell del usuario $usuario ha sido cambiada a $nueva_shell."
+    echo "<=================================================================>"
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     # Verificar que se ha actualizado correctamente la shell
     actual_shell=$(awk -F: /^$usuario:/ {print \$NF} /etc/passwd)
     if [ $actual_shell = $nueva_shell ]; then
-      echo "La shell del usuario $usuario ha sido actualizada correctamente."
-      read x
+      echo -e "\n"
+      echo "<================================================================>"
+      echo " La shell del usuario $usuario ha sido actualizada correctamente."
+      echo "<================================================================>"
+      read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     else
+      echo -e "\n"
       echo "Ha ocurrido un error al actualizar la shell del usuario $usuario."
       return 1
-      read x
+      read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
     fi
   else
+    echo -e "\n"
     echo "Ha ocurrido un error al cambiar la shell del usuario $usuario."
     return 1
-    read x
+    read -n 1 -s -r -p "Presione cualquier tecla para continuar..."
   fi
 }
 
@@ -154,9 +186,7 @@ Menu
     case $opcion in
         1) crear_usuario;;
         2) borrar_usuario;;
-        3) mostrar_usuarios
-	   read x
-	   ;;
+        3) mostrar_usuarios;;
         4) validar_usuario;;
         5) cambiar_shell;;
         6) exit 0;;
@@ -166,7 +196,7 @@ Menu
 		   echo "| (    \/   ) (   | (    \/| (    \/| (    \/"
 		   echo "| (__       | |   | (__    | (_____ | (_____ "
 		   echo "|  __)      | |   |  __)   (_____  )(_____  )"
-                   echo "| (         | |   | (            ) |      ) |"
+        	   echo "| (         | |   | (            ) |      ) |"
 		   echo "| (____/\   | |   | (____/\/\____) |/\____) |"
 		   echo "(_______/   )_(   (_______/\_______)\_______)"
 		   echo ""
